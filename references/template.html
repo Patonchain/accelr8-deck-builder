@@ -7,6 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* ============================================
            ACCELR8 DECK BUILDER
@@ -176,11 +179,17 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            transition: transform 150ms ease, background 150ms ease;
+            transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
         }
 
         .controls button:hover {
             transform: translateY(-1px);
+        }
+
+        .controls button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .controls .btn-primary {
@@ -191,6 +200,46 @@
         .controls .btn-secondary {
             background: hsl(20 10% 20%);
             color: hsl(40 20% 80%);
+        }
+
+        /* Export progress */
+        .export-progress {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: hsl(20 15% 10%);
+            border: 1px solid hsl(20 10% 25%);
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .export-progress.active {
+            display: block;
+        }
+
+        .export-progress p {
+            color: hsl(40 20% 90%);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .export-progress .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: hsl(20 10% 25%);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .export-progress .progress-fill {
+            height: 100%;
+            background: var(--color-accent);
+            width: 0%;
+            transition: width 200ms ease;
         }
 
         /* Presentation mode */
@@ -214,24 +263,6 @@
         body.presenting .slide.active {
             opacity: 1;
             pointer-events: auto;
-        }
-
-        /* Print / PDF */
-        @media print {
-            @page { size: 1920px 1080px; margin: 0; }
-            body { background: white; }
-            .deck { padding: 0; gap: 0; }
-            .controls { display: none; }
-            .slide {
-                width: 1920px;
-                height: 1080px;
-                aspect-ratio: auto;
-                border-radius: 0;
-                box-shadow: none;
-                page-break-after: always;
-                page-break-inside: avoid;
-            }
-            .slide:last-child { page-break-after: auto; }
         }
     </style>
 </head>
@@ -271,7 +302,7 @@
             </div>
             <div>
                 <!-- Replace with generated image -->
-                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80" alt="Visual">
+                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80" alt="Visual" crossorigin="anonymous">
             </div>
         </section>
 
@@ -293,7 +324,14 @@
 
     <div class="controls">
         <button class="btn-secondary" onclick="present()">Present (P)</button>
-        <button class="btn-primary" onclick="exportPDF()">Export PDF</button>
+        <button class="btn-primary" id="exportBtn" onclick="exportPDF()">Export PDF</button>
+    </div>
+
+    <div class="export-progress" id="exportProgress">
+        <p id="exportStatus">Exporting slides...</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
     </div>
 
     <script>
@@ -323,8 +361,88 @@
         function next() { goTo(current + 1); }
         function prev() { goTo(current - 1); }
 
-        function exportPDF() {
-            window.print();
+        // PDF Export
+        async function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const exportBtn = document.getElementById('exportBtn');
+            const progress = document.getElementById('exportProgress');
+            const progressFill = document.getElementById('progressFill');
+            const status = document.getElementById('exportStatus');
+
+            // Disable button and show progress
+            exportBtn.disabled = true;
+            exportBtn.textContent = 'Exporting...';
+            progress.classList.add('active');
+
+            // PDF dimensions (16:9 in points, 72 points per inch)
+            // Using 1920x1080 ratio at reasonable print size
+            const pdfWidth = 960;  // points
+            const pdfHeight = 540; // points
+
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'pt',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            const slideElements = document.querySelectorAll('.slide');
+            const total = slideElements.length;
+
+            for (let i = 0; i < total; i++) {
+                const slide = slideElements[i];
+
+                // Update progress
+                status.textContent = `Exporting slide ${i + 1} of ${total}...`;
+                progressFill.style.width = `${((i + 1) / total) * 100}%`;
+
+                // Temporarily style slide for capture
+                const originalStyles = {
+                    borderRadius: slide.style.borderRadius,
+                    boxShadow: slide.style.boxShadow,
+                    width: slide.style.width,
+                    aspectRatio: slide.style.aspectRatio
+                };
+
+                slide.style.borderRadius = '0';
+                slide.style.boxShadow = 'none';
+                slide.style.width = '1920px';
+                slide.style.aspectRatio = '16 / 9';
+
+                // Capture slide
+                const canvas = await html2canvas(slide, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: null,
+                    width: 1920,
+                    height: 1080
+                });
+
+                // Restore original styles
+                Object.assign(slide.style, originalStyles);
+
+                // Add to PDF
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                if (i > 0) {
+                    pdf.addPage([pdfWidth, pdfHeight], 'landscape');
+                }
+
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            }
+
+            // Get title from document or first h1
+            const title = document.title || document.querySelector('h1')?.textContent || 'presentation';
+            const filename = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.pdf';
+
+            // Download
+            pdf.save(filename);
+
+            // Reset UI
+            exportBtn.disabled = false;
+            exportBtn.textContent = 'Export PDF';
+            progress.classList.remove('active');
+            progressFill.style.width = '0%';
         }
 
         // Keyboard

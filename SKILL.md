@@ -1,6 +1,6 @@
 ---
 name: accelr8-deck-builder
-description: Create beautiful slide decks as shareable webpages. Use when asked to make presentations, pitch decks, or slides. Exports to PDF. Generates images with nanobanana.
+description: Create beautiful slide decks as shareable webpages. Use when asked to make presentations, pitch decks, or slides. Generates images with nanobanana, removes backgrounds automatically. Exports to PDF.
 ---
 
 # ACCELR8 Deck Builder
@@ -9,49 +9,85 @@ Create slide decks as standalone HTML files. Share as a link. Export as PDF with
 
 ## Quick Start
 
-1. Create a new HTML file using the template below
-2. Add slides using the layout classes
-3. Generate images with nanobanana if needed
-4. Open in browser to present or export
+1. Read `references/template.html` — this is your starting point
+2. Create a new HTML file, copy the template contents
+3. Add slides using the layout classes below
+4. Generate images using the asset workflow
+5. Open in browser to present or export
+
+## The Asset Workflow
+
+When slides need images, use this three-step process:
+
+### 1. Generate with Background Removal
+
+```bash
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --prompt "a confident businesswoman presenting" \
+  --output speaker.png \
+  --remove-bg
+```
+
+This generates the image AND removes the background automatically.
+
+### 2. Generate without Background Removal
+
+For backgrounds, gradients, full-bleed images:
+
+```bash
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --prompt "abstract gradient, warm orange to deep purple, minimal, 16:9" \
+  --output hero-bg.png
+```
+
+### 3. Remove Background from Existing Image
+
+```bash
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --input photo.jpg \
+  --output photo-clean.png \
+  --remove-bg
+```
+
+### Prompt Guidelines for Clean Cutouts
+
+When generating images for background removal, include:
+- "isolated on white background"
+- "product photography style"
+- "clean edges"
+- "studio lighting"
+
+The script adds these automatically when `--remove-bg` is used.
+
+**Examples:**
+
+```bash
+# Person for split slide
+--prompt "professional man in suit, confident pose" --remove-bg
+
+# Product shot
+--prompt "modern laptop, front view, floating" --remove-bg
+
+# Icon/object
+--prompt "golden trophy, 3D render" --remove-bg
+
+# Abstract shape (no bg removal needed)
+--prompt "flowing abstract ribbons, blue and purple gradient"
+```
 
 ## Template
 
-Every deck starts with this structure. Copy it exactly:
+Read `references/template.html` for the complete working template. Copy it to start a new deck.
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DECK TITLE HERE</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
-<body>
-    <div class="deck" id="deck">
-        <!-- SLIDES GO HERE -->
-    </div>
-    <div class="controls">
-        <button class="btn-secondary" onclick="present()">Present (P)</button>
-        <button class="btn-primary" id="exportBtn" onclick="exportPDF()">Export PDF</button>
-    </div>
-    <div class="export-progress" id="exportProgress">
-        <p id="exportStatus">Exporting slides...</p>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    </div>
-</body>
-</html>
-```
-
-The full template with all CSS and JS is in `references/template.html`. Copy that file to start a new deck.
+The template includes:
+- All CSS styles embedded
+- PDF export with progress indicator
+- Presentation mode
+- All slide layouts ready to use
 
 ## Slide Layouts
 
-Each slide is a `<section class="slide slide--TYPE">`. Available types:
+Each slide is a `<section class="slide slide--TYPE">`:
 
 ### Title Slide
 ```html
@@ -88,6 +124,9 @@ Each slide is a `<section class="slide slide--TYPE">`. Available types:
 ```
 
 ### Split Slide (Text + Image)
+
+Perfect for transparent PNGs:
+
 ```html
 <section class="slide slide--split">
     <div>
@@ -96,7 +135,7 @@ Each slide is a `<section class="slide slide--TYPE">`. Available types:
         <p>Description text.</p>
     </div>
     <div>
-        <img src="image.png" alt="Description" crossorigin="anonymous">
+        <img src="speaker.png" alt="Speaker" crossorigin="anonymous">
     </div>
 </section>
 ```
@@ -177,21 +216,36 @@ Use inside any slide:
 </div>
 ```
 
-## Generating Images
+## Workflow Example
 
-Use nanobanana when slides need images:
+Creating a pitch deck:
 
 ```bash
-uv run ~/.codex/skills/nano-banana-pro/scripts/generate_image.py \
-  --prompt "abstract gradient, warm orange to purple, minimal, 16:9 aspect ratio" \
-  --filename "hero.png" \
-  --resolution 2K
-```
+# 1. Copy template
+cp ~/accelr8-deck-builder/references/template.html ./pitch-deck.html
 
-**Prompt tips:**
-- Always include "16:9 aspect ratio" for slide images
-- Add "minimal, professional" for business decks
-- Be specific: "warm", "corporate", "energetic", "calm"
+# 2. Generate hero background
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --prompt "abstract gradient, dark blue to purple, minimal, 16:9" \
+  --output hero-bg.png
+
+# 3. Generate team photo cutout
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --prompt "diverse startup team, casual professional, standing together" \
+  --output team.png \
+  --remove-bg
+
+# 4. Generate product shot
+python ~/accelr8-deck-builder/scripts/generate_asset.py \
+  --prompt "modern SaaS dashboard on laptop screen, floating, 3D render" \
+  --output product.png \
+  --remove-bg
+
+# 5. Edit pitch-deck.html, add slides, reference images
+
+# 6. Open in browser, present or export PDF
+open pitch-deck.html
+```
 
 ## Features
 
@@ -204,17 +258,18 @@ uv run ~/.codex/skills/nano-banana-pro/scripts/generate_image.py \
 
 1. One idea per slide
 2. Maximum 6 bullet points
-3. Images for emotion, text for information
-4. Section dividers every 3-4 slides
-5. End with clear call to action
+3. Use transparent PNGs for people/products on split slides
+4. Full-bleed images for emotional impact
+5. Section dividers every 3-4 slides
+6. End with clear call to action
 
-## Sharing
+## Requirements
 
-The deck is a static HTML file. Share by:
-- Hosting anywhere (Vercel, Netlify, GitHub Pages)
-- Sending the file directly
-- Dropping in shared folder
+- Python 3.8+
+- nanobanana skill (for image generation)
+- rembg (auto-installed on first use)
+- GEMINI_API_KEY environment variable
 
 ---
 
-Read `references/template.html` for the complete working template with all styles and scripts.
+Read `references/template.html` for the complete working template.

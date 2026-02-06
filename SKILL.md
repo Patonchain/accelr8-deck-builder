@@ -1,22 +1,22 @@
 ---
 name: accelr8-deck-builder
-description: Create beautiful, shareable slide decks as webpages. Use when asked to make presentations, pitch decks, or slides. Generates images with nanobanana. Exports to PDF.
+description: Create beautiful slide decks as shareable webpages. Use when asked to make presentations, pitch decks, or slides. Exports to PDF. Generates images with nanobanana.
 ---
 
 # ACCELR8 Deck Builder
 
-Create slide decks as standalone HTML pages. Share as a link. Export as PDF. Generate images on demand.
+Create slide decks as standalone HTML files. Share as a link. Export as PDF with one click.
 
-## How It Works
+## Quick Start
 
-1. Write the deck as a single HTML file
-2. Generate images with nanobanana as needed
-3. The webpage IS the deck — share the link
-4. Export button downloads as PDF
+1. Create a new HTML file using the template below
+2. Add slides using the layout classes
+3. Generate images with nanobanana if needed
+4. Open in browser to present or export
 
-## Creating a Deck
+## Template
 
-Every deck is a self-contained HTML file. Use the template in `references/template.html`.
+Every deck starts with this structure. Copy it exactly:
 
 ```html
 <!DOCTYPE html>
@@ -24,105 +24,197 @@ Every deck is a self-contained HTML file. Use the template in `references/templa
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deck Title</title>
-    <!-- Styles are embedded - no external dependencies -->
+    <title>DECK TITLE HERE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="deck" id="deck">
-        <!-- Slides here -->
+        <!-- SLIDES GO HERE -->
     </div>
     <div class="controls">
-        <button onclick="exportPDF()">Export PDF</button>
-        <button onclick="present()">Present</button>
+        <button class="btn-secondary" onclick="present()">Present (P)</button>
+        <button class="btn-primary" id="exportBtn" onclick="exportPDF()">Export PDF</button>
+    </div>
+    <div class="export-progress" id="exportProgress">
+        <p id="exportStatus">Exporting slides...</p>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
 </body>
 </html>
 ```
 
+The full template with all CSS and JS is in `references/template.html`. Copy that file to start a new deck.
+
 ## Slide Layouts
 
-See `references/layouts.md` for all available layouts:
+Each slide is a `<section class="slide slide--TYPE">`. Available types:
 
-- `slide--title` — Opening slide, centered
-- `slide--content` — Standard content
-- `slide--bullets` — Large bullet points
-- `slide--split` — Text + image side by side
-- `slide--quote` — Centered quotation
-- `slide--image` — Full-bleed image
-- `slide--section` — Dark section divider
-- `slide--code` — Code examples
-- `slide--end` — Closing slide
+### Title Slide
+```html
+<section class="slide slide--title">
+    <p class="label">Category</p>
+    <h1>Main Title</h1>
+    <p>Subtitle text</p>
+</section>
+```
+
+### Content Slide
+```html
+<section class="slide slide--content">
+    <h2>Slide Title</h2>
+    <p>Body text here.</p>
+    <ul>
+        <li>Point one</li>
+        <li>Point two</li>
+        <li>Point three</li>
+    </ul>
+</section>
+```
+
+### Bullets Slide (Large)
+```html
+<section class="slide slide--bullets">
+    <h2>Key Points</h2>
+    <ul>
+        <li>First major point</li>
+        <li>Second major point</li>
+        <li>Third major point</li>
+    </ul>
+</section>
+```
+
+### Split Slide (Text + Image)
+```html
+<section class="slide slide--split">
+    <div>
+        <p class="label">Label</p>
+        <h2>Title</h2>
+        <p>Description text.</p>
+    </div>
+    <div>
+        <img src="image.png" alt="Description" crossorigin="anonymous">
+    </div>
+</section>
+```
+
+### Quote Slide
+```html
+<section class="slide slide--quote">
+    <blockquote>
+        "Quote text here."
+        <cite>— Attribution</cite>
+    </blockquote>
+</section>
+```
+
+### Image Slide (Full Bleed)
+```html
+<section class="slide slide--image">
+    <img src="hero.png" alt="Description" crossorigin="anonymous">
+    <figcaption>Optional caption</figcaption>
+</section>
+```
+
+### Section Divider
+```html
+<section class="slide slide--section">
+    <p class="label">Part One</p>
+    <h2>Section Title</h2>
+</section>
+```
+
+### Code Slide
+```html
+<section class="slide slide--code">
+    <h2>Example</h2>
+    <pre><code>const x = 1;</code></pre>
+</section>
+```
+
+### End Slide
+```html
+<section class="slide slide--end">
+    <h2>Thank You</h2>
+    <p>contact@example.com</p>
+</section>
+```
+
+## Components
+
+Use inside any slide:
+
+```html
+<!-- Two columns -->
+<div class="columns">
+    <div>Left</div>
+    <div>Right</div>
+</div>
+
+<!-- Three columns -->
+<div class="columns-3">
+    <div>One</div>
+    <div>Two</div>
+    <div>Three</div>
+</div>
+
+<!-- Card -->
+<div class="card">
+    <h3>Title</h3>
+    <p>Content</p>
+</div>
+
+<!-- Numbered step -->
+<div class="icon-row">
+    <span class="badge">1</span>
+    <div>
+        <h3>Step</h3>
+        <p>Description</p>
+    </div>
+</div>
+```
 
 ## Generating Images
 
-When a slide needs an image, generate it with nanobanana:
+Use nanobanana when slides need images:
 
 ```bash
 uv run ~/.codex/skills/nano-banana-pro/scripts/generate_image.py \
-  --prompt "abstract gradient, warm orange and deep purple, minimal, 16:9 aspect ratio" \
-  --filename "slide-hero.png" \
+  --prompt "abstract gradient, warm orange to purple, minimal, 16:9 aspect ratio" \
+  --filename "hero.png" \
   --resolution 2K
 ```
 
-**Image workflow:**
-1. Plan what images the deck needs
-2. Generate each at 2K resolution (good balance of quality/speed)
-3. Save to the deck folder
-4. Reference with relative paths: `<img src="slide-hero.png">`
+**Prompt tips:**
+- Always include "16:9 aspect ratio" for slide images
+- Add "minimal, professional" for business decks
+- Be specific: "warm", "corporate", "energetic", "calm"
 
-**Prompt tips for slides:**
-- Include "16:9 aspect ratio" for full-bleed images
-- Include "minimal, clean, professional" for business decks
-- Include "abstract, gradient" for section backgrounds
-- Be specific about mood: "warm", "corporate", "energetic", "calm"
+## Features
 
-## The Controls
+- **Present button** — Fullscreen mode (or press P)
+- **Export PDF** — Downloads PDF automatically, each slide = one page
+- **Arrow keys** — Navigate in presentation mode
+- **Escape** — Exit presentation
 
-Every deck includes:
-- **Export PDF** — Downloads the deck as a PDF document
-- **Present** — Fullscreen presentation mode (P key also works)
-- **Arrow keys** — Navigate slides in presentation mode
+## Design Rules
+
+1. One idea per slide
+2. Maximum 6 bullet points
+3. Images for emotion, text for information
+4. Section dividers every 3-4 slides
+5. End with clear call to action
 
 ## Sharing
 
-The deck is a static HTML file. Share it by:
-- Hosting on any static server (Vercel, Netlify, GitHub Pages)
-- Sending the HTML file directly
-- Dropping in a shared folder
-
-## PDF Export
-
-The export button uses the browser's print functionality with custom page sizing:
-- Each slide becomes one PDF page
-- 16:9 aspect ratio preserved
-- High quality vector output
-
-## Design Principles
-
-1. **One idea per slide** — If you need more, make another slide
-2. **Maximum 6 bullets** — Fewer is better
-3. **Images for emotion** — Text for information
-4. **Section dividers** — Every 3-4 slides for structure
-5. **End with action** — What should they do next?
-
-## File Structure
-
-```
-my-deck/
-├── index.html      # The deck
-├── hero.png        # Generated images
-├── diagram.png
-└── team-photo.png
-```
-
-## Quick Start
-
-1. Copy `references/template.html` to your deck folder
-2. Edit the slides
-3. Generate images as needed with nanobanana
-4. Open in browser to preview
-5. Share the link or export PDF
+The deck is a static HTML file. Share by:
+- Hosting anywhere (Vercel, Netlify, GitHub Pages)
+- Sending the file directly
+- Dropping in shared folder
 
 ---
 
-*Build decks that move people.*
+Read `references/template.html` for the complete working template with all styles and scripts.
